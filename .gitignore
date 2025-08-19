@@ -1,0 +1,2 @@
+# Ignorar arquivos de propriedades com credenciais
+src/main/resources/db.properties

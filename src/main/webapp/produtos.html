@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Produtos - Quitanda</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+    }
+    h1 {
+        color: #333;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .form-container {
+        margin-bottom: 30px;
+        border: 1px solid #ccc;
+        padding: 20px;
+        border-radius: 5px;
+    }
+    .form-container input {
+        padding: 8px;
+        margin-right: 10px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+    .form-container button {
+        padding: 10px 20px; /* Aumentei o padding para o botão principal */
+        background-color: #5cb85c;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 1em; /* Ajustei o tamanho da fonte */
+    }
+    .form-container button:hover {
+        background-color: #4cae4c;
+    }
+    .btn-excluir, .btn-editar {
+        padding: 8px 12px; /* Aumentei o padding para os botões da tabela */
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.9em; /* Ajustei o tamanho da fonte dos botões da tabela */
+        margin-right: 5px; /* Adicionei uma margem à direita para separar os botões */
+    }
+    .btn-excluir {
+        background-color: #d9534f;
+    }
+    .btn-excluir:hover {
+        background-color: #c9302c;
+    }
+    .btn-editar {
+        background-color: #0275d8;
+    }
+    .btn-editar:hover {
+        background-color: #025aa5;
+    }
+</style>
+</head>
+<body>
+    <h1>Controle de Estoque</h1>
+
+    <div class="form-container">
+        <h2>Adicionar/Editar Produto</h2>
+        <form id="form-produto">
+            <input type="hidden" id="produtoId">
+            <input type="text" id="nome" placeholder="Nome do Produto" required>
+            <input type="number" id="precoCompra" placeholder="Preço de Compra" required step="0.01">
+            <input type="number" id="precoVenda" placeholder="Preço de Venda" required step="0.01">
+            <input type="number" id="quantidadeEstoque" placeholder="Qtd. em Estoque" required>
+            <button type="submit" id="btn-submit">Adicionar</button>
+        </form>
+    </div>
+
+    <table id="tabela-produtos">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Preço de Venda</th>
+                <th>Estoque</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <script>
+        const apiUrl = 'http://localhost:8080/QuitandaBackend/produtos';
+        const formProduto = document.getElementById('form-produto');
+        const tabelaBody = document.querySelector('#tabela-produtos tbody');
+        const btnSubmit = document.getElementById('btn-submit');
+        const produtoIdInput = document.getElementById('produtoId');
+
+        // Função para carregar os produtos da API e preencher a tabela
+        function carregarProdutos() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(produtos => {
+                    tabelaBody.innerHTML = '';
+                    produtos.forEach(produto => {
+                        const row = tabelaBody.insertRow();
+                        row.insertCell(0).textContent = produto.id;
+                        row.insertCell(1).textContent = produto.nome;
+                        row.insertCell(2).textContent = `R$ ${produto.precoVenda.toFixed(2)}`;
+                        row.insertCell(3).textContent = produto.quantidadeEstoque;
+
+                        const acoesCell = row.insertCell(4);
+                        const btnEditar = document.createElement('button');
+                        btnEditar.textContent = 'Editar';
+                        btnEditar.classList.add('btn-editar');
+                        btnEditar.addEventListener('click', () => preencherFormularioParaEdicao(produto));
+
+                        const btnExcluir = document.createElement('button');
+                        btnExcluir.textContent = 'Excluir';
+                        btnExcluir.classList.add('btn-excluir');
+                        btnExcluir.addEventListener('click', () => excluirProduto(produto.id));
+
+                        acoesCell.appendChild(btnEditar);
+                        acoesCell.appendChild(btnExcluir);
+                    });
+                })
+                .catch(error => {
+                    console.error('Houve um problema ao carregar os produtos:', error);
+                });
+        }
+
+        // Função para preencher o formulário quando o botão de editar é clicado
+        function preencherFormularioParaEdicao(produto) {
+            produtoIdInput.value = produto.id;
+            document.getElementById('nome').value = produto.nome;
+            document.getElementById('precoCompra').value = produto.precoCompra;
+            document.getElementById('precoVenda').value = produto.precoVenda;
+            document.getElementById('quantidadeEstoque').value = produto.quantidadeEstoque;
+            btnSubmit.textContent = 'Salvar Alterações';
+        }
+
+        // Função para enviar requisição de exclusão (DELETE)
+        function excluirProduto(id) {
+            if (confirm(`Tem certeza que deseja excluir o produto com ID ${id}?`)) {
+                fetch(`${apiUrl}/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.message) });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    alert(data.message);
+                    carregarProdutos();
+                })
+                .catch(error => {
+                    alert('Falha ao excluir produto: ' + error.message);
+                });
+            }
+        }
+
+        // --- Lógica do formulário para Adicionar ou Editar ---
+        formProduto.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            const id = produtoIdInput.value;
+            const nome = document.getElementById('nome').value;
+            const precoCompra = parseFloat(document.getElementById('precoCompra').value);
+            const precoVenda = parseFloat(document.getElementById('precoVenda').value);
+            const quantidadeEstoque = parseInt(document.getElementById('quantidadeEstoque').value);
+
+            const produto = {
+                id: id ? parseInt(id) : undefined,
+                nome: nome,
+                precoCompra: precoCompra,
+                precoVenda: precoVenda,
+                quantidadeEstoque: quantidadeEstoque
+            };
+
+            const metodo = id ? 'PUT' : 'POST';
+            const url = id ? apiUrl : apiUrl;
+
+            fetch(url, {
+                method: metodo,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(produto)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message);
+                formProduto.reset();
+                produtoIdInput.value = ''; // Limpa o ID oculto
+                btnSubmit.textContent = 'Adicionar';
+                carregarProdutos();
+            })
+            .catch(error => {
+                alert('Falha na operação: ' + error.message);
+            });
+        });
+
+        // Chama a função para carregar os produtos quando a página é carregada
+        document.addEventListener('DOMContentLoaded', carregarProdutos);
+    </script>
+</body>
+</html>
